@@ -1,0 +1,28 @@
+# Windows
+Thumbs.db
+desktop.ini
+
+# Temporäre Dateien
+.vs/
+*.tmp
+*.log
+*.bak
+*.zip
+*.7z
+
+# Lokale Umgebungsvariablen / Secrets
+.env
+secrets.txt
+credentials.txt
+config.local.*
+*.local
+
+# PowerShell lokal installierte Module, falls vorhanden
+modules/
+
+# Output-Ordner
+out/
+build/
+dist/
+bin/
+obj/

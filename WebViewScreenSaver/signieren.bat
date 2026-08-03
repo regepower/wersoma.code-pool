@@ -1,0 +1,1 @@
+signtool sign /fd SHA256 /a /tr http://timestamp.digicert.com /td SHA256 C:\Users\trolldenier\Documents\WebViewScreenSaver\bin\Release\net8.0-windows\win-x64\WebViewScreensaver.exe

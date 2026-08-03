@@ -1,0 +1,20 @@
+Windows Registry Editor Version 5.00
+
+; STEP Import - direkter Kontextmenue-Eintrag fuer .stp und .step Dateien
+; Pro Benutzer (HKEY_CURRENT_USER) - keine Admin-Rechte noetig
+; Erscheint bei Windows 11 direkt im Rechtsklick-Menue, nicht unter
+; "Weitere Optionen anzeigen"
+
+[HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.stp\shell\STEP_Import]
+@="CAM Projektordner erstellen"
+"Icon"="C:\\Windows\\System32\\shell32.dll,278"
+
+[HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.stp\shell\STEP_Import\command]
+@="\"N:\\Download\\PortableApps\\STEP_Import.bat\" \"%1\""
+
+[HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.step\shell\STEP_Import]
+@="CAM Projektordner erstellen"
+"Icon"="C:\\Windows\\System32\\shell32.dll,278"
+
+[HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.step\shell\STEP_Import\command]
+@="\"N:\\Download\\PortableApps\\STEP_Import.bat\" \"%1\""

@@ -1,0 +1,12 @@
+﻿# Standard: Git soll Zeilenenden automatisch behandeln
+* text=auto
+
+# Windows-Batchdateien sollen CRLF behalten
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# PowerShell-Skripte als Text behandeln
+*.ps1 text
+
+# Shell-Skripte mit LF
+*.sh text eol=lf

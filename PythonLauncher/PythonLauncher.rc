@@ -1,0 +1,75 @@
+#include <windows.h>
+
+#define VER_FILEVERSION        1,0,0,0
+#define VER_FILEVERSION_STR    "1.0.0.0\0"
+
+#define VER_PRODUCTVERSION     1,0,0,0
+#define VER_PRODUCTVERSION_STR "1.0.0.0\0"
+
+
+IDI_ICON1 ICON DISCARDABLE "PythonLauncher.ico"
+
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION VER_FILEVERSION
+ PRODUCTVERSION VER_PRODUCTVERSION
+
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+
+#ifdef _DEBUG
+ FILEFLAGS VS_FF_DEBUG
+#else
+ FILEFLAGS 0x0L
+#endif
+
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_APP
+ FILESUBTYPE 0x0L
+
+BEGIN
+
+    BLOCK "StringFileInfo"
+    BEGIN
+
+        BLOCK "040704E4"
+        BEGIN
+
+            VALUE "CompanyName", 
+                  "WERSOMA GmbH\0"
+
+            VALUE "FileDescription",
+                  "Python Launcher\0"
+
+            VALUE "FileVersion",
+                  VER_FILEVERSION_STR
+
+            VALUE "InternalName",
+                  "PythonLauncher.exe\0"
+
+            VALUE "OriginalFilename",
+                  "PythonLauncher.exe\0"
+
+            VALUE "ProductName",
+                  "WERSOMA Python Tools\0"
+
+            VALUE "ProductVersion",
+                  VER_PRODUCTVERSION_STR
+
+            VALUE "LegalCopyright",
+                  "Copyright WERSOMA GmbH\0"
+
+        END
+
+    END
+
+
+    BLOCK "VarFileInfo"
+    BEGIN
+
+        VALUE "Translation",
+              0x407,
+              1252
+
+    END
+
+END
