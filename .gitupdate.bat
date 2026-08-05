@@ -8,7 +8,7 @@ REM Prüft, ob durch 'git add' wirklich etwas im Staging-Bereich gelandet ist
 git diff --staged --quiet
 if %errorlevel% == 0 (
     echo Keine neuen Aenderungen gefunden. Alles ist aktuell.
-    timeout /t 3
+    timeout /t 5
     exit /b
 )
 
