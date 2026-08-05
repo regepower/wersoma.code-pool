@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch AutoHotkey Script",
+            "type": "autohotkey",
+            "request": "launch",
+            "program": "${file}",
+            "runtime": "N:\\Download\\PortableApps\\Autohotkey\\v2\\AutoHotkey64.exe",
+            "cwd": "${workspaceFolder}",
+        }
+    ]
+}

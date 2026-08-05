@@ -1,0 +1,8 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\SystemFileAssociations\.csv\Shell\PowerShellView]
+@="Mit PowerShell GridView anzeigen"
+"HasLUAShield"=""
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\SystemFileAssociations\.csv\Shell\PowerShellView\command]
+@="powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"Import-Csv -LiteralPath '%1' | Out-GridView\""

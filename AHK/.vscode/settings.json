@@ -1,0 +1,9 @@
+{
+    "AHK++.v2.file": {
+        "compileBaseFile": "",
+        "helpPath": "N:\Download\PortableApps\Autohotkey\AutoHotkey.chm",
+        "interpreterPath": "N:\Download\PortableApps\Autohotkey\v2\AutoHotkey64.exe",
+        "maxScanDepth": 2,
+        "templateSnippetName": "AhkTemplateV2"
+    }
+}

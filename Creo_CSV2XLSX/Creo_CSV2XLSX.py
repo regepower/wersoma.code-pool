@@ -5,6 +5,28 @@ Creo_CSV2XLSX.py
 Konvertiert eine hierarchische Creo-Stückliste (CSV) in eine strukturierte
 Excel-Arbeitsmappe.
 
+Änderungshistorie (neueste zuerst):
+  V1.0.2  04.08.26   Wärmebehandlung-Mapping erweitert (Plasmanitriert,
+                     Tiefennitriert, Brüniert, Vakuumhärten) und robuster
+                     gemacht: Schreibweisen mit Umlaut oder ae/oe/ue/ss sowie
+                     Groß-/Kleinschreibung werden jetzt einheitlich über eine
+                     Normalisierungsfunktion erkannt (vorher nur .lower()).
+                     Einzelgewicht wird bei zusammengeführten Positionen nicht
+                     mehr aufsummiert (bleibt Stückgewicht der Einzelposition);
+                     Masse-Formel im Tabellenkopf der Schlosserliste korrigiert
+                     auf SUMPRODUCT(Stückzahl, Einzelgewicht) statt reiner
+                     Summe der Gewichtsspalte.
+
+  V1.0.1  03.08.26   Kumulierung der Unterbaugruppen-Stückzahl korrigiert -
+                     eine Baugruppe, die selbst mehrfach verbaut ist, hat ihre
+                     Stückzahl bisher nicht an ihre Unterteile weitergegeben
+                     (Multiplikator-Kette für verschachtelte Baugruppen ergänzt).
+                     Prüfhinweise-Spalte im Stand-Blatt hinzugefügt (Logging
+                     direkt in der Excel-Ausgabe, betroffene Zeilen gelb markiert).
+
+  Ältere Änderungen bitte hier oberhalb der jeweils vorherigen ergänzen, mit
+  Versionsnummer, Datum und einer kurzen Beschreibung - siehe Format oben.
+
 Wichtig (Blatt-Reihenfolge):
   1) Tabelle1  → <Auftragsnummer>_fuer_GFU
   2) Tabelle2  → <Auftragsnummer>_Schlosserliste
@@ -36,15 +58,13 @@ Exit code:
 """
 
 import time
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
-# Automatische Skriptversion aus dem letzten Änderungszeitpunkt der Datei.
-# Beispiel: v20260728-0435
-try:
-    SCRIPT_VERSION = "v" + datetime.fromtimestamp(Path(__file__).stat().st_mtime).strftime("%Y%m%d-%H%M")
-except (OSError, NameError):
-    SCRIPT_VERSION = "v-unbekannt"
+# Versionsnummer manuell hier UND in der Änderungshistorie oben pflegen -
+# ein automatischer Zeitstempel (z.B. aus dem Datei-Änderungsdatum) sagt
+# nichts darüber aus, WAS sich geändert hat.
+SCRIPT_VERSION = "V1.0.2"
 
 import argparse
 import csv
@@ -134,13 +154,30 @@ FLAT_COLUMNS = [
     "Bemerkungen", "F,K,N", "V", "Rev.", "Dateiname", "Lieferant",
 ]
 
+def normalisiere_waerme_schluessel(s: str) -> str:
+    """Vereinheitlicht Schreibweisen für den Wärmebehandlung-Abgleich:
+    Kleinschreibung + Umlaute auf ae/oe/ue/ss (ASCII) vereinheitlicht.
+    So matchen 'glühen', 'Glühen' und 'gluehen' alle auf denselben Schlüssel,
+    unabhängig davon, wie Creo den Text im jeweiligen Export schreibt."""
+    s = s.strip().lower()
+    for a, b in (('ä', 'ae'), ('ö', 'oe'), ('ü', 'ue'), ('ß', 'ss')):
+        s = s.replace(a, b)
+    return s
+
+
+# Schlüssel bereits normalisiert (siehe normalisiere_waerme_schluessel) - beim
+# Ergänzen neuer Einträge normale/korrekte Schreibweise nehmen, hier unten
+# in Kleinbuchstaben mit ae/oe/ue/ss eintragen, der Rest passiert automatisch.
 WAERME_MAP = {
-    'glühen': 'GLUE',
-    'gluehen': 'GLUE',
-    'vergütet': 'VERGUE',
-    'einsatzgehärtet': 'TE+TH',
+    'einsatzgehaertet': 'TE+TH',
+    'verguetet': 'VERGUE',
     'nitriert': 'NIT',
-    'vakuumgehärtet': 'VAK-H',
+    'plasmanitriert': 'NIT-P',
+    'tiefennitriert': 'NIT-T',
+    'brueniert': 'BRUE',
+    'gluehen': 'GLUE',
+    'vakuumhaerten': 'VAK-H',
+    'vakuumgehaertet': 'VAK-H',  # ältere/alternative Schreibweise, gleiches Kürzel
 }
 
 SCHWEISSTEIL_RE = re.compile(r'^schwei[sß]s?teil$', re.IGNORECASE)
@@ -196,7 +233,7 @@ def convert_waermebehandlung(raw, entry):
     s = str(raw).strip()
     if s in ('', '-', ' -'):
         return s
-    mapped = WAERME_MAP.get(s.lower())
+    mapped = WAERME_MAP.get(normalisiere_waerme_schluessel(s))
     if mapped:
         return mapped
     log('WARN', f"Wärmebehandlung '{s}' nicht im Mapping – Originalwert behalten",
@@ -515,10 +552,9 @@ def aggregate_items(schweissteile: list, sonstige: list):
                 except (TypeError, ValueError) as e:
                     log('WARN', f"Stück-Summierung fehlgeschlagen ({e})", zeile=entry.get('row'),
                         benennung=entry.get('Benennung'), sachnummer=sachnr, posnr=posnr)
-                try:
-                    groups[key]['Gewicht'] = round(float(groups[key].get('Gewicht') or 0.0) + float(entry.get('Gewicht') or 0.0), 4)
-                except (TypeError, ValueError):
-                    pass
+                # Gewicht bleibt das Einzelgewicht (Stückgewicht) der ersten
+                # Fundstelle - wird NICHT aufsummiert. Die Gesamtmasse wird nur
+                # im Tabellenkopf der Schlosserliste kumuliert (Summenformel).
                 log('INFO', f"kumuliert – {groups[key]['Stück']} Stück gesamt", zeile=entry.get('row'),
                     benennung=entry.get('Benennung'), sachnummer=sachnr, posnr=posnr)
 
@@ -677,7 +713,7 @@ def write_schlosser_sheet(wb, src_ws, header_row: int, aggregated: list, n_schwe
         ws.column_dimensions[get_column_letter(c)].width = breite
 
     # Masse-Kopfzelle als Formel wie Vorlage
-    ws.cell(header_row, 6).value = '="Masse\n"&ROUNDUP(SUM(F8:F999),0)&"kg"'
+    ws.cell(header_row, 6).value = '="Masse\n"&ROUNDUP(SUMPRODUCT($B$8:$B$999,$F$8:$F$999),0)&"kg"'
 
     ws.row_dimensions[header_row].height = 42
 
