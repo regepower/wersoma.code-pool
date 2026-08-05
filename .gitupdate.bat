@@ -8,7 +8,7 @@ REM Prüft, ob durch 'git add' wirklich etwas im Staging-Bereich gelandet ist
 git diff --staged --quiet
 if %errorlevel% == 0 (
     echo Keine neuen Aenderungen gefunden. Alles ist aktuell.
-    timeout /t 50
+    timeout /t 5
     exit /b
 )
 
@@ -23,4 +23,4 @@ git push
 
 echo.
 echo Erfolgreich auf GitHub hochgeladen!
-timeout /t 5
+timeout /t 50
