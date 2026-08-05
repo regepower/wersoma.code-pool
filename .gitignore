@@ -2,13 +2,14 @@
 Thumbs.db
 desktop.ini
 
-# Temporäre Dateien
+# Temporäre Dateien, Archive und Executables
 .vs/
 *.tmp
 *.log
 *.bak
 *.zip
 *.7z
+*.exe
 
 # Lokale Umgebungsvariablen / Secrets
 .env
