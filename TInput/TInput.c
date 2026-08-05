@@ -31,6 +31,9 @@ int main(int argc, char *argv[])
     time_t start;
     int  i, deflen;
 
+    /* stderr sofort ausgeben (kein Puffer) */
+    setbuf(stderr, NULL);
+
     /* --- Hilfe anzeigen wenn keine Parameter --- */
     if (argc < 2) {
         fprintf(stderr,
@@ -47,18 +50,18 @@ int main(int argc, char *argv[])
             "  TInput \"Name: \" \"Hans\" 5   Prompt + Vorgabe + 5 Sek.\n"
             "  TInput \"Name: \" \"\" 5       Prompt + leere Vorgabe + 5 Sek.\n"
             "\n"
+            "Batch-Nutzung (for /f):\n"
+            "  for /f \"tokens=*\" %%a in ('TInput \"Name: \" \"Max\" 5') do set ERG=%%a\n"
+            "  echo %ERG%\n"
+            "\n"
             "Funktion:\n"
-            "  - Prompt und Vorgabetext werden angezeigt\n"
+            "  - Prompt und Vorgabetext werden auf stderr angezeigt\n"
+            "  - Ergebnis (nur der Wert) erscheint auf stdout\n"
             "  - Nach Timeout wird Vorgabetext automatisch uebernommen\n"
             "  - Sobald getippt wird: Timeout auf unendlich,\n"
             "    nur der Vorgabetext wird geloescht\n"
             "  - ENTER ohne Tippen -> Vorgabetext uebernehmen\n"
             "  - ESC -> Abbruch, Vorgabetext uebernehmen\n"
-            "  - Ergebnis wird auf stdout ausgegeben\n"
-            "\n"
-            "Batch-Nutzung:\n"
-            "  TInput \"Name: \" \"Hans\" 5 > temp.txt\n"
-            "  set /p NAME=<temp.txt\n"
             "\n");
         return 1;
     }
@@ -104,11 +107,8 @@ int main(int argc, char *argv[])
 
     /* Prompt auf stderr ausgeben (wird nie geloescht) */
     fprintf(stderr, "%s", prompt_text);
-    fflush(stderr);
-
     /* Vorgabetext auf stderr ausgeben (wird bei Tippen geloescht) */
     fprintf(stderr, "%s", default_text);
-    fflush(stderr);
 
     start = time(NULL);
 
@@ -137,7 +137,6 @@ int main(int argc, char *argv[])
                 for (i = 0; i < deflen; i++) {
                     fprintf(stderr, "\b \b");   /* Cursor zurueck, loeschen, zurueck */
                 }
-                fflush(stderr);
             }
 
             /* Backspace */
@@ -145,14 +144,12 @@ int main(int argc, char *argv[])
                 if (pos > 0) {
                     pos--;
                     fprintf(stderr, "\b \b");
-                    fflush(stderr);
                 }
             }
             /* Druckbare Zeichen */
             else if (ch >= 32 && ch < 127 && pos < 255) {
                 buffer[pos++] = ch;
                 fputc(ch, stderr);   /* Echo manuell auf stderr */
-                fflush(stderr);
             }
         }
 
@@ -165,13 +162,12 @@ int main(int argc, char *argv[])
         }
     }
 
-	if (typing) {
-		buffer[pos] = '\0';
-	}
+    if (typing) {
+        buffer[pos] = '\0';
+    }
     fprintf(stderr, "\n");
-    fflush(stderr);
 
-    /* --- Ergebnis auf stdout -> wird von Dateiumleitung eingefangen --- */
+    /* --- Ergebnis auf stdout -> wird von Dateiumleitung / for /f eingefangen --- */
     printf("%s\n", buffer);
 
     return 0;
