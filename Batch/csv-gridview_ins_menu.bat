@@ -1,21 +1,38 @@
 @echo off
-chcp 65001 >nul
+cd /d "C:\Users\trolldenier\Documents\Makrosammlung.git"
 
-fltmc >nul 2>&1
-if %errorlevel% neq 0 (
-    echo Keine Admin-Rechte - starte Skript als Administrator neu...
-    powershell -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
+echo ==========================================
+echo  Hole zuerst Updates von GitHub...
+echo ==========================================
+git pull
+
+echo.
+echo ==========================================
+echo  Pruefe nun auf lokale Aenderungen...
+echo ==========================================
+git add .
+
+REM Prüft, ob durch 'git add' wirklich etwas im Staging-Bereich gelandet ist
+git diff --staged --quiet
+if %errorlevel% == 0 (
+    echo Keine neuen Aenderungen gefunden. Alles ist aktuell!
+    timeout /t 3
     exit /b
 )
 
-echo [INFO] Admin-Rechte vorhanden. Registriere CSV-Kontextmenue...
+echo.
+echo Es gibt Aenderungen!
+set /p msg="Bitte kurze Beschreibung eingeben (oder Enter fuer Auto-Text): "
 
-reg add "HKLM\SOFTWARE\Classes\SystemFileAssociations\.csv\Shell\PowerShellView" /ve /t REG_SZ /d "Mit PowerShell GridView anzeigen" /f
-reg add "HKLM\SOFTWARE\Classes\SystemFileAssociations\.csv\Shell\PowerShellView" /v "Icon" /t REG_SZ /d "shell32.dll,152" /f
-
-:: Inline-Befehl mit Fehlerabfang
-reg add "HKLM\SOFTWARE\Classes\SystemFileAssociations\.csv\Shell\PowerShellView\command" /ve /t REG_SZ /d "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ""try { Import-Csv -LiteralPath '%%1' -ErrorAction Stop | Out-GridView } catch { Write-Host 'Fehler:' $_.Exception.Message; Read-Host 'Druecke Enter' }""" /f
+if "%msg%"=="" set msg=Auto-Update am %date% um %time%
 
 echo.
-echo [OK] Eintrag gesetzt. Teste es jetzt mit Rechtsklick auf eine CSV.
-pause
+echo Erstelle Commit und lade hoch...
+git commit -m "%msg%"
+git push
+
+echo.
+echo ==========================================
+echo  Erfolgreich auf GitHub hochgeladen!
+echo ==========================================
+timeout /t 5
