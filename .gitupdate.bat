@@ -31,7 +31,7 @@ set "ss=%time:~6,2%"
 set "zeit=%hh%:%mm%:%ss%"
 
 REM ---------- TInput mit Prompt, Default (inkl. Zeit) und Timeout 10 Sek. ----------
-for /f "tokens=*" %%a in ('N:\Download\PortableApps\TInput.exe "Bitte kurze Beschreibung eingeben (oder Enter fuer Auto-Text): " "Auto-Update am %date% um %zeit%"') do set msg=%%a
+for /f "tokens=*" %%a in ('N:\Download\PortableApps\TInput.exe "Bitte kurze Beschreibung eingeben (oder Enter fuer Auto-Text): " "Auto-Update am %date% um %zeit%" 10') do set msg=%%a
 
 echo.
 echo Erstelle Commit und lade hoch...
