@@ -6,6 +6,16 @@ Konvertiert eine hierarchische Creo-Stückliste (CSV) in eine strukturierte
 Excel-Arbeitsmappe.
 
 Änderungshistorie (neueste zuerst):
+  V1.0.3  05.08.26   XLSX-Dateiname richtet sich jetzt nach der Sachnummer aus
+                     Ebene E1 (z.B. '38-02024.00_STUECKLISTE.XLSX'), unabhängig
+                     vom Namen der CSV-Quelldatei. Schlosserliste-Blatt und PDF
+                     heißen entsprechend '..._SCHLOSSERLISTE' (Blattname und
+                     PDF-Dateiname sind identisch). Die Erkennung, ob eine
+                     bestehende XLSX fortgesetzt wird (Modus FORTSETZEN), läuft
+                     jetzt ebenfalls über diese Archivnummer statt über den
+                     CSV-Dateinamen. Neue Häkchen-Spalte (Spalte A) in der
+                     Schlosserliste zum manuellen Abhaken erledigter Positionen.
+
   V1.0.2  04.08.26   Wärmebehandlung-Mapping erweitert (Plasmanitriert,
                      Tiefennitriert, Brüniert, Vakuumhärten) und robuster
                      gemacht: Schreibweisen mit Umlaut oder ae/oe/ue/ss sowie
@@ -184,6 +194,7 @@ SCHWEISSTEIL_RE = re.compile(r'^schwei[sß]s?teil$', re.IGNORECASE)
 
 # Schlosserliste: wie Vorlage 38-02024-00_Schlosserliste
 SCHLOSSER_HEADERS = [
+    "✓",
     "Pos.", "Stk.",
     "Benennung\n(Dateiname)",
     "Sachnummer\nNorm-Kurzbezeichnung",
@@ -192,9 +203,9 @@ SCHLOSSER_HEADERS = [
     "Lieferant\nBemerkungen",
     "F,K,N", "V", "Rev.",
 ]
-SCHLOSSER_BREITEN = [7.7109375, 5.28515625, 28.7109375, 32.7109375, 21.7109375,
+SCHLOSSER_BREITEN = [6.0, 7.7109375, 5.28515625, 28.7109375, 32.7109375, 21.7109375,
                      10.7109375, 17.7109375, 4.7109375, 5.0, 6.0]
-SCHLOSSER_MERGES = ["C2:C3", "D2:D3", "E2:F3", "G2:G3", "H2:J3", "E4:F5", "G4:G5"]
+SCHLOSSER_MERGES = ["D2:D3", "E2:E3", "F2:G3", "H2:H3", "I2:K3", "F4:G5", "H4:H5"]
 
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -313,19 +324,17 @@ def find_header(ws):
 
 
 def find_auftragsnummer(ws, header_row: int) -> str:
+    """Findet die Sachnummer der Ebene E1 (Punktformat, z.B. '38-02024.00') im
+    Titelblock. Das ist die kanonische Kennung für Datei- und Blattnamen -
+    unabhängig davon, wie die CSV-Quelldatei selbst benannt ist."""
     pattern = re.compile(r'\d{2}-\d{5}\.\d{2}')
     for r in range(1, header_row):
         for c in range(1, ws.max_column + 1):
             v = str(ws.cell(r, c).value or '')
             m = pattern.search(v)
             if m:
-                return m.group(0).replace('.', '-')
+                return m.group(0)
     return 'unbekannt'
-
-
-def find_stamm(csv_stem: str) -> str:
-    m = re.match(r'(\d{2}_\d{5}_\d{2})', csv_stem)
-    return m.group(1) if m else csv_stem
 
 
 def read_rows(ws, header_row: int, hmap: dict) -> list:
@@ -660,13 +669,13 @@ def write_schlosser_sheet(wb, src_ws, header_row: int, aggregated: list, n_schwe
     # Die vier Angaben aus I/J des Quellblatts werden an die vorgesehenen
     # Stellen des Titelblocks verschoben (siehe SCHLOSSER_MERGES: E4:F5 und
     # G4:G5 gehören zusammen - G3 lag außerhalb dieser Merge-Zeile, war ein Fehler).
-    ws['E2'] = src_ws['I1'].value
-    ws['G2'] = src_ws['J1'].value
-    ws['H2'] = 'Rote Nr:'
-    ws['E4'] = src_ws['I3'].value
-    ws['G4'] = src_ws['J3'].value
+    ws['F2'] = src_ws['I1'].value
+    ws['H2'] = src_ws['J1'].value
+    ws['I2'] = 'Rote Nr:'
+    ws['F4'] = src_ws['I3'].value
+    ws['H4'] = src_ws['J3'].value
     # Ursprüngliche I/J-Zellen aus dem kopierten Titelblock leeren - der Inhalt
-    # ist jetzt nach E2/G2/E4/G4 verschoben, sonst stünde er doppelt da
+    # ist jetzt nach F2/H2/F4/H4 verschoben, sonst stünde er doppelt da
     for coord in ('I1', 'J1', 'I3', 'J3'):
         ws[coord] = None
 
@@ -681,7 +690,7 @@ def write_schlosser_sheet(wb, src_ws, header_row: int, aggregated: list, n_schwe
 
     # Titelblock-Schrift: Bahnschrift SemiCondensed.
     for row in range(1, 7):
-        for col in range(1, 11):
+        for col in range(1, 12):
             cell = ws.cell(row, col)
             if row in (2, 3):
                 cell.font = Font(name='Bahnschrift SemiCondensed', sz=16, bold=False)
@@ -692,15 +701,15 @@ def write_schlosser_sheet(wb, src_ws, header_row: int, aggregated: list, n_schwe
     # Wertbereich G4:G5 (Änderungsstand-Wert) groß und fett - NICHT E/F
     # (das ist das Label 'Änderungsstand:', siehe Ausnahmen unten)
     for row in range(4, 6):
-        for col in (7, 8, 9, 10):  # G, H, I, J
+        for col in (8, 9, 10, 11):  # H, I, J, K
             ws.cell(row, col).font = Font(name='Bahnschrift SemiCondensed', sz=24, bold=True)
 
     # Explizite Ausnahmen von der Standard-Logik oben:
-    for coord in ('C2', 'D2'):
+    for coord in ('D2', 'E2'):
         ws[coord].font = Font(name='Bahnschrift SemiCondensed', sz=24, bold=True)
-    for coord in ('C4', 'D4', 'C5', 'D5', 'E4', 'F4', 'E5', 'F5'):
+    for coord in ('D4', 'E4', 'D5', 'E5', 'F4', 'G4', 'F5', 'G5'):
         ws[coord].font = Font(name='Bahnschrift SemiCondensed', sz=16, bold=False)
-    for coord in ('E2', 'E4'):
+    for coord in ('F2', 'F4'):
         ws[coord].alignment = Alignment(horizontal='right', vertical='center', wrap_text=True)
 
     # Kopfzeile: Rot, Bahnschrift SemiCondensed 16 bold, weiße Schrift
@@ -712,8 +721,8 @@ def write_schlosser_sheet(wb, src_ws, header_row: int, aggregated: list, n_schwe
         cell.border = BORDER
         ws.column_dimensions[get_column_letter(c)].width = breite
 
-    # Masse-Kopfzelle als Formel wie Vorlage
-    ws.cell(header_row, 6).value = '="Masse\n"&ROUNDUP(SUMPRODUCT($B$8:$B$999,$F$8:$F$999),0)&"kg"'
+    # Masse-Kopfzelle als Formel wie Vorlage (Stück jetzt Spalte C, Gewicht Spalte G)
+    ws.cell(header_row, 7).value = '="Masse\n"&ROUNDUP(SUMPRODUCT($C$8:$C$999,$G$8:$G$999),0)&"kg"'
 
     ws.row_dimensions[header_row].height = 42
 
@@ -738,6 +747,7 @@ def write_schlosser_sheet(wb, src_ws, header_row: int, aggregated: list, n_schwe
         lief_bem = f"{lief}\n{bem}" if bem and bem not in ('-', '') else lief
 
         row_data = [
+            None,  # Häkchen-Spalte: bleibt leer, zum manuellen Abhaken
             entry.get('Pos-Nr'),
             entry.get('Stück'),
             ben_dat,
@@ -753,13 +763,15 @@ def write_schlosser_sheet(wb, src_ws, header_row: int, aggregated: list, n_schwe
         for c, val in enumerate(row_data, 1):
             cell = ws.cell(r_off, c, val)
             cell.font = SCHLOSSER_FONT
-            # Pos rechtsbündig wie Vorlage
+            # Pos rechtsbündig wie Vorlage, Häkchen-Spalte zentriert
             if c == 1:
+                cell.alignment = Alignment(wrap_text=True, vertical='top', horizontal='center')
+            elif c == 2:
                 cell.alignment = Alignment(wrap_text=True, vertical='top', horizontal='right')
             else:
                 cell.alignment = Alignment(wrap_text=True, vertical='top')
             cell.border = BORDER
-            if c == 6:
+            if c == 7:
                 cell.number_format = '0.00'
             # Alle Zeilen mit 'F' in Spalte H ('F,K,N') grau einfärben - auch
             # Schweißteile, die haben ja ebenfalls ein 'F' dort und brauchen
@@ -1007,24 +1019,14 @@ def _reorder_sheets(wb, gfu_name: str, schlosser_name: str, latest_stand_name: s
 
 # ── Ordner-Erkennung ──────────────────────────────────────────────────────────
 
-def find_csv_and_xlsx(ordner: Path):
+def find_csv(ordner: Path) -> Path:
+    """Sucht im Ordner nach genau einer CSV-Datei."""
     csvs = [f for f in ordner.iterdir() if f.suffix.lower() == '.csv' and not f.name.startswith('~$')]
     if len(csvs) == 0:
         raise FileNotFoundError("Keine CSV-Datei im Ordner gefunden.")
     if len(csvs) > 1:
         raise ValueError("Mehrere CSV-Dateien gefunden – bitte nur eine ablegen:\n" + "\n".join(f"  {f.name}" for f in csvs))
-    csv_path = csvs[0]
-    stamm = find_stamm(csv_path.stem)
-
-    kandidaten = [f for f in ordner.iterdir()
-                  if f.suffix.lower() == '.xlsx' and not f.name.startswith('~$') and f.stem.startswith(stamm)]
-    if len(kandidaten) > 1:
-        raise ValueError(
-            f"Mehrere XLSX-Dateien zum Auftragsstamm '{stamm}' gefunden – bitte eindeutig machen:\n" +
-            "\n".join(f"  {f.name}" for f in kandidaten)
-        )
-    xlsx_path = kandidaten[0] if kandidaten else None
-    return csv_path, xlsx_path
+    return csvs[0]
 
 
 # ── Hauptverarbeitung ─────────────────────────────────────────────────────────
@@ -1035,16 +1037,13 @@ def process(ordner: Path, interaktiv: bool = True) -> int:
     print("=" * 62)
 
     try:
-        csv_path, xlsx_path = find_csv_and_xlsx(ordner)
+        csv_path = find_csv(ordner)
     except (FileNotFoundError, ValueError) as e:
         log('FEHLER', str(e))
         return 1
 
-    modus = 'FORTSETZEN' if xlsx_path else 'NEU'
     print(f"Ordner : {ordner}")
     print(f"Quelle : {csv_path.name}")
-    print(f"Modus  : {modus}" + (f"  ({xlsx_path.name} gefunden)" if xlsx_path else ""))
-    print("-" * 62)
 
     try:
         _, src_ws, _ = load_csv(csv_path)
@@ -1059,6 +1058,10 @@ def process(ordner: Path, interaktiv: bool = True) -> int:
         return 1
 
     auftragsnr = find_auftragsnummer(src_ws, header_row)
+    xlsx_path = ordner / f"{auftragsnr}_STUECKLISTE.XLSX"
+    modus = 'FORTSETZEN' if xlsx_path.exists() else 'NEU'
+    print(f"Modus  : {modus}" + (f"  ({xlsx_path.name} gefunden)" if modus == 'FORTSETZEN' else ""))
+    print("-" * 62)
     print(f"Archivnummer: {auftragsnr}")
     print("-" * 62)
 
@@ -1084,12 +1087,11 @@ def process(ordner: Path, interaktiv: bool = True) -> int:
     log('INFO', f"GFU-Liste: {len(aggregated)} Positionen ({n_sw} Schweißteile vorne, {len(aggregated) - n_sw} weitere)")
 
     heute = date.today().strftime('%Y%m%d')
-    stamm = find_stamm(csv_path.stem)
-    stand_name = f"{stamm}_Stand_{heute}"[:31]
+    stand_name = f"{auftragsnr}_Stand_{heute}"[:31]
     gfu_name = f"{auftragsnr}_fuer_GFU"[:31]
-    schlosser_name = f"{auftragsnr}_Schlosserliste"[:31]
+    schlosser_name = f"{auftragsnr}_SCHLOSSERLISTE"[:31]
 
-    if xlsx_path:
+    if xlsx_path.exists():
         _import_openpyxl()
         wb = openpyxl.load_workbook(xlsx_path)
         for name in [gfu_name, schlosser_name]:
@@ -1100,7 +1102,6 @@ def process(ordner: Path, interaktiv: bool = True) -> int:
         _import_openpyxl()
         wb = openpyxl.Workbook()
         wb.remove(wb.active)
-        xlsx_path = ordner / f"{stamm}.xlsx"
 
     write_source_sheet(wb, src_ws, header_row, hmap, valid, stand_name, probleme_je_zeile)
     log('INFO', f"Aktuelle Liste: '{stand_name}'")
@@ -1120,7 +1121,8 @@ def process(ordner: Path, interaktiv: bool = True) -> int:
         log('FEHLER', f"XLSX konnte nicht gespeichert werden: {e}")
         return 1
 
-    pdf_path = xlsx_path.with_name(f"{xlsx_path.stem}_Schlosserliste.pdf")
+    # PDF heißt wie das Schlosserliste-Tabellenblatt
+    pdf_path = ordner / f"{schlosser_name}.PDF"
     try:
         export_schlosserliste_pdf(xlsx_path, pdf_path, schlosser_name, header_row)
     except Exception as e:

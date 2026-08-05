@@ -22,9 +22,9 @@ if %errorlevel% == 0 (
 
 echo.
 echo Es gibt Aenderungen!
-set /p msg="Bitte kurze Beschreibung eingeben (oder Enter fuer Auto-Text): "
 
-if "%msg%"=="" set msg=Auto-Update am %date% um %time%
+REM ---------- Ersetzt das bisherige set /p durch TInput ----------
+for /f "tokens=*" %%a in ('.\TInput\TInput.exe "Bitte kurze Beschreibung eingeben (oder Enter fuer Auto-Text): " "Auto-Update am %date% um %time%" 10') do set msg=%%a
 
 echo.
 echo Erstelle Commit und lade hoch...
